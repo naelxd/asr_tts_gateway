@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  tts:
+    build:
+      context: .
+      dockerfile: tts_service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - TTS_SR=16000
+      - TTS_CH=1
+      - TTS_CHUNK_SAMPLES=640
+      - TTS_MODEL=tts_models/en/ljspeech/tacotron2-DDC
+    volumes:
+      - models_tts:/opt/models
+      - logs:/var/log/app
+    networks:
+      - speech_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  asr:
+    build:
+      context: .
+      dockerfile: asr_service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - ASR_SR=16000
+      - ASR_MAX_SECONDS=15
+      - ASR_MODEL=tiny.en
+    volumes:
+      - models_asr:/opt/models
+      - logs:/var/log/app
+    networks:
+      - speech_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TTS_WS_URL=ws://tts:8082/ws/tts
+      - ASR_URL=http://asr:8081/api/stt/bytes
+    volumes:
+      - logs:/var/log/app
+    networks:
+      - speech_net
+    depends_on:
+      - tts
+      - asr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  models_asr:
+  models_tts:
+  logs:
+
+networks:
+  speech_net:
+    driver: bridge

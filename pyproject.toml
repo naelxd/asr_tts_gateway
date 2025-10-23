@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "C", "B"]
+ignore = ["E203"]
+exclude = ["venv", ".git", "node_modules", "__pycache__", ".env", ".env.*", "env"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+skip-string-normalization = true
+exclude = '''
+/(
+    \.git
+  | \.env
+  | \.env.*
+  | venv
+  | node_modules
+  | __pycache__
+  | env
+)/
+'''
+
+
+
+[tool.pytest.ini_options]
+# pytest configuration
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "asr_service/tests",
+    "tts_service/tests",
+    "gateway/tests",
+    "tests"
+]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning"
+]

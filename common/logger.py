@@ -25,13 +25,11 @@ def get_logger(name: str = "app") -> logging.Logger:
     level = os.getenv("LOG_LEVEL", "INFO").upper()
     logger.setLevel(level)
 
-    # INFO и ниже → stdout
     info_handler = logging.StreamHandler(sys.stdout)
     info_handler.setLevel(logging.INFO)
     info_handler.addFilter(lambda record: record.levelno < logging.ERROR)
     info_handler.setFormatter(JsonFormatter())
 
-    # ERROR и выше → stderr
     error_handler = logging.StreamHandler(sys.stderr)
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(JsonFormatter())
@@ -42,5 +40,4 @@ def get_logger(name: str = "app") -> logging.Logger:
     return logger
 
 
-# глобальный логгер для импорта
 logger = get_logger()

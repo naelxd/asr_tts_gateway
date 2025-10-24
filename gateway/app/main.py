@@ -5,6 +5,7 @@ import json
 import requests
 import websockets
 import os
+import time
 from typing import AsyncGenerator
 from common.logger import logger
 
@@ -15,6 +16,25 @@ TTS_WS_URL = os.getenv("TTS_WS_URL", "ws://localhost:8082/ws/tts")
 ASR_URL = os.getenv("ASR_URL", "http://localhost:8081/api/stt/bytes")
 
 app = FastAPI(title="gateway", version="0.1.0")
+
+
+@app.middleware("http")
+async def log_http_errors(request: Request, call_next):
+    """Middleware для логирования HTTP ошибок 4xx/5xx"""
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    # Логируем ошибки 4xx и 5xx
+    if response.status_code >= 400:
+        process_time = time.time() - start_time
+        logger.error(
+            f"HTTP {response.status_code} error: {request.method} {request.url.path} "
+            f"- {response.status_code} - {process_time:.3f}s - "
+            f"client: {request.client.host if request.client else 'unknown'}"
+        )
+
+    return response
 
 
 async def safe_send_json(ws: WebSocket, data: dict):
@@ -73,18 +93,12 @@ async def forward_to_client(
         return
 
 
-# ---------------------
-# Основная функция прокси
-# ---------------------
-
-
 async def proxy_tts_ws(client_ws: WebSocket, tts_ws_url: str):
     """Основной прокси для WebSocket TTS."""
     try:
         async with websockets.connect(tts_ws_url) as tts_ws:
             logger.info("Connected to TTS service")
 
-            # 1️⃣ Сразу принимаем первый JSON с текстом
             try:
                 first_msg = await client_ws.receive_text()
                 await tts_ws.send(first_msg)
@@ -93,7 +107,6 @@ async def proxy_tts_ws(client_ws: WebSocket, tts_ws_url: str):
                 await safe_send_json(client_ws, {"error": str(e)})
                 return
 
-            # 2️⃣ Запускаем пересылку в обе стороны
             try:
                 await asyncio.gather(
                     forward_to_tts(client_ws, tts_ws),
@@ -104,7 +117,6 @@ async def proxy_tts_ws(client_ws: WebSocket, tts_ws_url: str):
                 logger.error(f"Error in proxy gather: {e}")
                 await safe_send_json(client_ws, {"error": str(e)})
             finally:
-                # Закрываем соединение с клиентом
                 try:
                     await client_ws.close()
                 except Exception:

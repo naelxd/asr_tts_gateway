@@ -12,7 +12,6 @@ def read_wav_as_pcm_s16le_mono16k(path: str) -> bytes:
         frames = wf.getnframes()
         raw = wf.readframes(frames)
 
-    # Convert input to float32 mono
     if sw == 2:
         x = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
     elif sw == 1:
@@ -25,7 +24,6 @@ def read_wav_as_pcm_s16le_mono16k(path: str) -> bytes:
     elif ch != 1:
         raise ValueError("Only mono or stereo WAV supported")
 
-    # Resample to 16kHz if needed (naive linear)
     target_sr = 16000
     if sr != target_sr:
         src_len = x.shape[0]
@@ -35,7 +33,6 @@ def read_wav_as_pcm_s16le_mono16k(path: str) -> bytes:
             np.float32
         )
 
-    # Convert to s16le bytes
     pcm = (np.clip(x, -1.0, 1.0) * 32767.0).astype("<i2").tobytes()
     return pcm
 
@@ -49,10 +46,8 @@ def main():
     parser.add_argument("--out", default="out_echo.wav", help="Output WAV file path")
     args = parser.parse_args()
 
-    # Read input WAV and convert to PCM
     pcm = read_wav_as_pcm_s16le_mono16k(args.wav)
 
-    # Send to gateway echo-bytes endpoint
     params = {"sr": 16000, "ch": 1, "fmt": "s16le"}
     resp = requests.post(
         args.url,
@@ -64,10 +59,9 @@ def main():
     )
     resp.raise_for_status()
 
-    # Save PCM response as WAV
     with wave.open(args.out, "wb") as wf:
-        wf.setnchannels(1)  # mono
-        wf.setsampwidth(2)  # s16le
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
         wf.setframerate(16000)
 
         for chunk in resp.iter_content(chunk_size=1024):

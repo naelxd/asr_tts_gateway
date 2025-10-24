@@ -5,6 +5,7 @@ import numpy as np
 from typing import List
 from faster_whisper import WhisperModel
 from common.logger import logger
+import time
 
 logger.info("Service started")
 
@@ -15,6 +16,25 @@ MODEL_NAME = os.getenv("ASR_MODEL", "tiny.en")
 
 app = FastAPI(title="asr-service", version="0.1.0")
 _model = None
+
+
+@app.middleware("http")
+async def log_http_errors(request: Request, call_next):
+    """Middleware для логирования HTTP ошибок 4xx/5xx"""
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    # Логируем ошибки 4xx и 5xx
+    if response.status_code >= 400:
+        process_time = time.time() - start_time
+        logger.error(
+            f"HTTP {response.status_code} error: {request.method} {request.url.path} "
+            f"- {response.status_code} - {process_time:.3f}s - "
+            f"client: {request.client.host if request.client else 'unknown'}"
+        )
+
+    return response
 
 
 def get_model():
@@ -59,7 +79,6 @@ async def stt_bytes(
             status_code=400, detail=f"Audio too long (> {MAX_SECONDS}s)"
         )
 
-    # Логируем информацию о входящем аудио
     duration = len(audio) / sr
     logger.info(f"Processing audio: {len(body)} bytes, {duration:.2f}s, lang={lang}")
 

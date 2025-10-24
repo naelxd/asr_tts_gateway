@@ -1,7 +1,5 @@
 .DS_Store
 env/
-DECISIONS.md
-PLAN.md
 task.md
 .env
 client/*.wav

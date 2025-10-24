@@ -3,6 +3,8 @@ requires = ["setuptools", "wheel"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "C", "B"]
 ignore = ["E203"]
 exclude = ["venv", ".git", "node_modules", "__pycache__", ".env", ".env.*", "env"]

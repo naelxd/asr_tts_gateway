@@ -17,7 +17,7 @@ async def stream_tts(uri: str, text: str, out_path: str, sr: int = 16000, ch: in
 
             with wave.open(out_path, "wb") as wf:
                 wf.setnchannels(ch)
-                wf.setsampwidth(2)  # s16le
+                wf.setsampwidth(2)
                 wf.setframerate(sr)
 
                 bytes_received = 0
@@ -36,7 +36,6 @@ async def stream_tts(uri: str, text: str, out_path: str, sr: int = 16000, ch: in
                                 if "error" in payload:
                                     raise RuntimeError(payload["error"])
                             except json.JSONDecodeError:
-                                # Ignore non-JSON text frames
                                 pass
                     except asyncio.TimeoutError:
                         print("Timeout waiting for message")

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from asr_service.app.main import app
+import numpy as np
 
 client = TestClient(app)
 
@@ -30,8 +31,6 @@ def test_stt_success(mock_whisper):
     seg_mock.start = 0.0
     seg_mock.end = 1.2
     mock_model.transcribe.return_value = ([seg_mock], {"language": "en"})
-
-    import numpy as np
 
     pcm_data = (np.zeros(16000, dtype="<i2")).tobytes()
 

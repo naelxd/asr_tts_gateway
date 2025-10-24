@@ -2,9 +2,10 @@ import math
 import asyncio
 import json
 import os
+import time
 from typing import AsyncGenerator
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from TTS.api import TTS
 from common.logger import logger
 
@@ -17,6 +18,25 @@ MODEL_NAME = os.getenv("TTS_MODEL", "tts_models/en/ljspeech/tacotron2-DDC")
 
 app = FastAPI(title="tts-service", version="0.1.0")
 _tts = None
+
+
+@app.middleware("http")
+async def log_http_errors(request: Request, call_next):
+    """Middleware для логирования HTTP ошибок 4xx/5xx"""
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    # Логируем ошибки 4xx и 5xx
+    if response.status_code >= 400:
+        process_time = time.time() - start_time
+        logger.error(
+            f"HTTP {response.status_code} error: {request.method} {request.url.path} "
+            f"- {response.status_code} - {process_time:.3f}s - "
+            f"client: {request.client.host if request.client else 'unknown'}"
+        )
+
+    return response
 
 
 def get_tts():
